@@ -1,0 +1,1163 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>あまりのあるわり算</title>
+<style>
+  /* ============ 共通 ============ */
+  :root{
+    --bg:#f7f8fb; --card:#ffffff; --ink:#333; --muted:#8a8fa0;
+    --dash:#cfd6e4; --drop:#86b7fe; --drop-bg:#eaf2ff; --radius:18px;
+    --primary:#4f7cff; --ok:#2e8b57; --ng:#d33;
+    --shadow:0 6px 20px rgba(0,0,0,.06);
+    --line:#e5e7eb;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Meiryo,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    touch-action:manipulation;
+  }
+
+  /* ============ タブヘッダー ============ */
+  .tabbar{
+    display:flex; gap:4px; padding:12px 20px 0; background:transparent;
+    position:sticky; top:0; z-index:5; backdrop-filter:saturate(180%) blur(8px);
+    background:rgba(247,248,251,.92);
+  }
+  .tab{
+    appearance:none; border:none; cursor:pointer; padding:12px 20px;
+    background:#e5eaf3; color:#555; font-weight:700; font-size:15px;
+    border-radius:14px 14px 0 0; font-family:inherit;
+    transition:background .15s, color .15s, transform .08s;
+  }
+  .tab:hover{ background:#dde3ee; }
+  .tab.active{
+    background:var(--card); color:var(--primary);
+    box-shadow:0 -2px 8px rgba(0,0,0,.05);
+  }
+  .tabPanel{ display:none; }
+  .tabPanel.active{ display:block; }
+
+  /* ============ 共通ボタン ============ */
+  .btn{
+    padding:12px 18px; border-radius:12px; border:none; cursor:pointer;
+    font-size:15px; font-weight:600; font-family:inherit;
+    background:#eef1f7; color:var(--ink);
+    transition:transform .08s, background .15s;
+  }
+  .btn:hover{ background:#e2e7f0; }
+  .btn:active{ transform:scale(.97); }
+  .btn.primary{ background:var(--primary); color:#fff; }
+  .btn.primary:hover{ background:#3d68e8; }
+  .btn.ghost{ background:transparent; border:2px solid var(--dash); }
+
+  /* ============ タブA: 花のたね ============ */
+  #tabA header{
+    padding:20px 20px 8px; display:flex; align-items:center; justify-content:space-between;
+    gap:12px; flex-wrap:wrap;
+  }
+  #tabA h1{ margin:0; font-size:clamp(18px,2.4vw,26px); font-weight:700; }
+  #tabA h1 b{ color:var(--primary); }
+  #tabA .topbtns{ display:flex; gap:8px; }
+  #tabA .wrap{ padding:8px 20px 24px; }
+  #tabA .board{
+    background:var(--card); border-radius:var(--radius); padding:16px;
+    box-shadow:var(--shadow);
+  }
+  #tabA .kids{ display:grid; gap:12px; grid-template-columns:repeat(var(--cols, 3), 1fr); }
+  #tabA .kid{
+    border:2px dashed var(--dash); border-radius:16px; padding:12px 10px;
+    background:#fafbff;
+    display:grid; grid-template-rows:auto 1fr; row-gap:8px;
+    min-height:170px;
+    transition:background .15s, border-color .15s;
+  }
+  #tabA .kid.over{ background:var(--drop-bg); border-color:var(--drop); }
+  #tabA .kidHead{ display:flex; justify-content:center; }
+  #tabA .face{ width:80px; height:80px; object-fit:contain; pointer-events:none; user-select:none; }
+  #tabA .slotSeeds{
+    display:flex; flex-direction:row; flex-wrap:wrap;
+    align-content:flex-start; justify-content:center;
+    gap:4px; min-height:60px; padding:4px;
+  }
+  #tabA .panel{
+    margin-top:14px; background:var(--card); border-radius:var(--radius);
+    padding:14px; box-shadow:var(--shadow);
+  }
+  #tabA .panel h3{ margin:0 0 8px; font-size:15px; color:var(--muted); font-weight:600; }
+  #tabA .zoneRow{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  #tabA .zoneLabel{ font-size:13px; color:var(--muted); margin-bottom:4px; }
+  #tabA .zone{
+    border:2px dashed var(--dash); border-radius:14px; padding:10px;
+    min-height:80px; background:#fafbff;
+    transition:background .15s, border-color .15s;
+  }
+  #tabA .zone.over{ background:var(--drop-bg); border-color:var(--drop); }
+  #tabA .zone .seeds{
+    display:flex; flex-direction:row; flex-wrap:wrap;
+    align-content:flex-start;
+    gap:6px; min-height:60px;
+  }
+  #tabA .seed{
+    width:40px; height:58px; cursor:grab; user-select:none;
+    flex:0 0 auto; -webkit-user-drag:element;
+  }
+  #tabA .seed:active{ cursor:grabbing; }
+  #tabA .seed.dragging{ visibility:hidden; }
+  #tabA .buttons{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+  #tabA .resultA{
+    margin-top:12px; font-size:22px; font-weight:700; min-height:32px; text-align:center;
+  }
+  #tabA .resultA.ok{ color:var(--ok); }
+  #tabA .resultA.ng{ color:var(--ng); }
+  @media (max-width:720px){
+    #tabA .kids{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); }
+    #tabA .zoneRow{ grid-template-columns:1fr; }
+    #tabA .face{ width:64px; height:64px; }
+    #tabA .seed{ width:32px; height:46px; }
+  }
+
+  /* ============ タブB: プリン ============ */
+  #tabB header{
+    padding:16px 20px; background:#fff;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+  }
+  #tabB header h1{ margin:0; font-size:clamp(16px,2.2vw,22px); flex:1 1 280px; }
+  #tabB .gearB{
+    border:none; background:#ff9800; color:#fff;
+    padding:12px 20px; border-radius:14px;
+    font-size:16px; font-weight:800; cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+    box-shadow:0 4px 10px rgba(255,152,0,.35);
+    font-family:inherit; transition:transform .1s, background .15s;
+  }
+  #tabB .gearB:hover{ background:#fb8c00; transform:translateY(-1px); }
+  #tabB .gearB:active{ transform:translateY(1px); }
+  #tabB .wrap{ max-width:1100px; margin:20px auto; padding:0 16px 24px; }
+  #tabB .people{
+    display:grid; gap:14px;
+    grid-template-columns:repeat(5,1fr);
+    margin-bottom:16px;
+  }
+  @media (max-width:880px){ #tabB .people{ grid-template-columns:repeat(3,1fr); } }
+  @media (max-width:520px){ #tabB .people{ grid-template-columns:repeat(2,1fr); } }
+  #tabB .person{
+    border:2px dashed #d5dbe6; border-radius:14px; padding:10px;
+    min-height:200px; background:#fff;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  #tabB .person.dragover{ outline:3px solid var(--primary); border-style:solid; }
+  #tabB .avatar{
+    width:90px; height:90px; border-radius:50%; overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.08); background:#fff;
+  }
+  #tabB .avatar img{ width:100%; height:100%; object-fit:cover; }
+  #tabB .slot{
+    display:flex; flex-wrap:wrap; gap:8px; min-height:90px;
+    width:100%; justify-content:center;
+  }
+  #tabB .bins{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px;
+    margin-bottom:16px;
+  }
+  @media (max-width:520px){ #tabB .bins{ grid-template-columns:1fr; } }
+  #tabB .bin{
+    border:2px solid var(--line); border-radius:12px; padding:10px;
+    min-height:130px; background:#fff;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  #tabB .bin .title{ font-size:14px; font-weight:700; color:#334155; }
+  #tabB .bin .area{
+    display:flex; flex-wrap:wrap; gap:8px; min-height:90px;
+    justify-content:center;
+  }
+  #tabB .bin.dragover{ outline:3px solid var(--primary); }
+  #tabB .jelly{
+    width:64px; height:64px; border-radius:14px;
+    background:#fff; border:1px solid var(--line);
+    display:grid; place-items:center;
+    user-select:none; -webkit-user-select:none;
+    cursor:grab; box-shadow:0 2px 6px rgba(0,0,0,.06);
+    touch-action:none;
+  }
+  #tabB .jelly img{ width:100%; height:100%; object-fit:contain; pointer-events:none; -webkit-user-drag:none; }
+  #tabB .jelly:active{ cursor:grabbing; }
+  #tabB .jelly.dragging{ opacity:.4; }
+  #tabB .jelly.flying{
+    position:fixed; z-index:10; pointer-events:none; transition:none;
+    box-shadow:0 8px 20px rgba(0,0,0,.25);
+  }
+  #tabB .controls{
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+    margin-bottom:8px;
+  }
+  #tabB .controls button{
+    border:none; padding:14px 22px; border-radius:12px;
+    font-weight:800; background:var(--primary); color:#fff;
+    cursor:pointer; font-size:16px; font-family:inherit;
+  }
+  #tabB .controls button.btn-secondary{ background:#e5e7eb; color:#111; }
+  #tabB .resultB{
+    margin-top:8px; font-weight:800; font-size:18px;
+    text-align:center; min-height:28px;
+  }
+  #tabB .resultB .ok{ color:var(--ok); } #tabB .resultB .ng{ color:var(--ng); }
+
+  /* ============ モーダル(共通スタイル) ============ */
+  .modal{
+    position:fixed; inset:0; background:rgba(0,0,0,.4); display:none;
+    justify-content:center; align-items:center; z-index:100; padding:16px;
+  }
+  .modal.show{ display:flex; }
+  .modal-card{
+    background:#fff; border-radius:20px; padding:24px; width:100%; max-width:420px;
+    max-height:90vh; overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+  }
+  .modal-card h2{ margin:0 0 16px; font-size:20px; }
+  .modal-card h3{ margin:14px 0 8px; font-size:15px; color:#334155; }
+  .field{ margin-bottom:18px; }
+  .field label{ display:block; margin-bottom:6px; font-weight:600; font-size:14px; color:#555; }
+  .field input[type=number], .field select{
+    width:100%; padding:10px 12px; font-size:16px; font-family:inherit;
+    border:2px solid var(--dash); border-radius:10px; background:#fafbff;
+  }
+  .field input:focus, .field select:focus{ outline:none; border-color:var(--primary); }
+  .toggle{ display:flex; align-items:center; gap:10px; }
+  .toggle input{ width:20px; height:20px; }
+  .hintBox{ background:#fff8dc; padding:10px; border-radius:10px; font-size:14px; }
+  .randomSection{
+    background:#f0f6ff; border:2px solid #d6e4ff; border-radius:12px;
+    padding:12px; margin-bottom:18px;
+  }
+  .modal-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:8px; flex-wrap:wrap; }
+  .settingsGrid{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:8px 10px; align-items:center;
+  }
+  .settingsGrid label{ font-size:14px; color:#334155; font-weight:600; }
+  .settingsGrid select, .settingsGrid input[type=number]{
+    padding:8px; border:1px solid #d1d5db; border-radius:8px;
+    background:#fff; font-weight:700; font-size:15px; font-family:inherit;
+  }
+  .quizStatus{
+    font-size:14px; color:#334155; margin:8px 0;
+    padding:8px; background:#f8fafc; border-radius:8px;
+  }
+  .quizStatus.done{ color:var(--ok); font-weight:700; background:#f0fdf4; }
+
+  /* ============ 花丸/よくできましたオーバーレイ(共通) ============ */
+  .praise{
+    position:fixed; inset:0; display:none; justify-content:center; align-items:center;
+    pointer-events:none; background:rgba(255,255,255,.3); z-index:50;
+  }
+  .praise.show{ display:flex; animation:pop .4s ease-out; }
+  .praise img{ width:min(70vw,500px); height:auto;
+    filter:drop-shadow(0 8px 18px rgba(0,0,0,.18));
+  }
+  @keyframes pop{
+    0%{transform:scale(.3); opacity:0;}
+    60%{transform:scale(1.1); opacity:1;}
+    100%{transform:scale(1); opacity:1;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ タブ切替 ============ -->
+<div class="tabbar" role="tablist">
+  <button class="tab active" id="tabBtnA" role="tab" aria-controls="tabA" aria-selected="true">３人で分ける</button>
+  <button class="tab"        id="tabBtnB" role="tab" aria-controls="tabB" aria-selected="false">３こずつ分ける</button>
+</div>
+
+<!-- ============================================================ -->
+<!-- タブA：花のたねを分ける（等分除）                             -->
+<!-- ============================================================ -->
+<section class="tabPanel active" id="tabA" role="tabpanel" aria-labelledby="tabBtnA">
+  <header>
+    <h1 id="A_title">花のたねが <b id="A_ttlSeeds">16こ</b> あります。<b id="A_ttlPeople">3人</b> に同じ数ずつ分けると？</h1>
+    <div class="topbtns">
+      <button id="A_settingBtn" class="btn ghost">⚙ せってい</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <section class="board">
+      <div class="kids" id="A_kids"></div>
+    </section>
+
+    <div class="panel">
+      <h3>たねおきば と あまり</h3>
+      <div class="zoneRow">
+        <div>
+          <div class="zoneLabel">たねおきば</div>
+          <div class="zone" id="A_stockZone"><div class="seeds" id="A_stock"></div></div>
+        </div>
+        <div>
+          <div class="zoneLabel">あまり</div>
+          <div class="zone" id="A_amariZone"><div class="seeds" id="A_amari"></div></div>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="btn primary" id="A_judgeBtn">やってみよう！</button>
+        <button class="btn" id="A_resetBtn">リセット</button>
+      </div>
+
+      <div id="A_result" class="resultA"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- タブB：プリンを分ける（包含除）                                -->
+<!-- ============================================================ -->
+<section class="tabPanel" id="tabB" role="tabpanel" aria-labelledby="tabBtnB">
+  <header>
+    <h1 id="B_title">プリンが14こ。1人に3こずつ分けると、何人に分けられる？</h1>
+    <button class="gearB" id="B_openSettings" aria-label="せってい">
+      <span style="font-size:20px;">⚙</span>せってい
+    </button>
+  </header>
+
+  <div class="wrap">
+    <div class="people" id="B_people"></div>
+
+    <div class="bins">
+      <div class="bin">
+        <div class="title">ストック（まだ配っていないプリン）</div>
+        <div id="B_stock" class="area"></div>
+      </div>
+      <div class="bin">
+        <div class="title">あまり置き場</div>
+        <div id="B_remainder" class="area"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="B_check">やってみよう！</button>
+      <button id="B_reset" class="btn-secondary">リセット</button>
+    </div>
+    <div id="B_result" class="resultB" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ============ 花丸（タブA） ============ -->
+<div class="praise" id="A_hanamaru" aria-hidden="true">
+  <img src="https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/19hanamaru.png?raw=true" alt="">
+</div>
+
+<!-- ============ よくできました（タブB） ============ -->
+<div class="praise" id="B_overlay" aria-hidden="true">
+  <img src="https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/12yokudekimasita.png?raw=true" alt="よくできました">
+</div>
+
+<!-- ============ せっていモーダル A ============ -->
+<div class="modal" id="A_settingModal" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <h2>せってい（３人で分ける）</h2>
+
+    <div class="randomSection">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button id="A_randomBtn" type="button" class="btn primary" style="white-space:nowrap;">🎲 ランダムで出題</button>
+        <select id="A_randomKind" style="padding:8px 10px; font-size:14px; border:2px solid var(--dash); border-radius:8px; background:#fff; font-family:inherit;">
+          <option value="any" selected>おまかせ</option>
+          <option value="amari">あまりが でる問題</option>
+          <option value="warikiri">わりきれる問題</option>
+        </select>
+      </div>
+      <div style="font-size:12px; color:var(--muted); margin-top:6px;">
+        ※ たねの数と人数の両方が ランダムに 決まります。
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="A_seedInput">たねの数 (1〜30)</label>
+      <input id="A_seedInput" type="number" min="1" max="30" value="16">
+    </div>
+
+    <div class="field">
+      <label for="A_peopleSelect">人数</label>
+      <select id="A_peopleSelect">
+        <option value="2">2人</option>
+        <option value="3" selected>3人</option>
+        <option value="4">4人</option>
+        <option value="5">5人</option>
+      </select>
+    </div>
+
+    <div class="field toggle">
+      <input id="A_soundToggle" type="checkbox" checked>
+      <label for="A_soundToggle" style="margin:0;">こうかおんを ならす</label>
+    </div>
+
+    <div class="field toggle">
+      <input id="A_hintToggle" type="checkbox">
+      <label for="A_hintToggle" style="margin:0;">こたえを ヒントで みる(先生用)</label>
+    </div>
+    <div id="A_hintBox" class="hintBox" style="display:none;"></div>
+
+    <div class="modal-actions">
+      <button id="A_cancelSetting" class="btn ghost">キャンセル</button>
+      <button id="A_applyBtn" class="btn primary">けってい</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ せっていモーダル B ============ -->
+<div class="modal" id="B_modalBg" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <h2>⚙ せってい（３こずつ分ける）</h2>
+
+    <div class="randomSection">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button id="B_randomBtn" type="button" class="btn primary" style="white-space:nowrap;">🎲 ランダムで出題</button>
+        <select id="B_randomKind" style="padding:8px 10px; font-size:14px; border:2px solid var(--dash); border-radius:8px; background:#fff; font-family:inherit;">
+          <option value="any" selected>おまかせ</option>
+          <option value="amari">あまりが でる問題</option>
+          <option value="warikiri">わりきれる問題</option>
+        </select>
+      </div>
+      <div style="font-size:12px; color:var(--muted); margin-top:6px;">
+        ※ プリンの数も人数も ランダムに 決まります。
+      </div>
+    </div>
+
+    <h3>もんだいの数</h3>
+    <div class="settingsGrid">
+      <label for="B_inpJellies">プリンの数</label>
+      <input id="B_inpJellies" type="number" min="1" max="40" step="1" value="14" />
+
+      <label for="B_selPeople">人数</label>
+      <select id="B_selPeople">
+        <option value="3">3人</option>
+        <option value="4">4人</option>
+        <option value="5" selected>5人</option>
+        <option value="6">6人</option>
+        <option value="7">7人</option>
+        <option value="8">8人</option>
+      </select>
+
+      <label for="B_selPer">1人に配る数</label>
+      <select id="B_selPer">
+        <option value="2">2こずつ</option>
+        <option value="3" selected>3こずつ</option>
+        <option value="4">4こずつ</option>
+        <option value="5">5こずつ</option>
+      </select>
+    </div>
+
+    <h3>じゅんばんに出題</h3>
+    <div class="settingsGrid">
+      <label for="B_selQuiz">出題のじゅんばん</label>
+      <select id="B_selQuiz">
+        <option value="perAsc" selected>2→3→4→5</option>
+        <option value="perDesc">5→4→3→2</option>
+      </select>
+    </div>
+    <div class="quizStatus" id="B_quizStatus">未開始</div>
+    <div class="modal-actions">
+      <button id="B_quizStart" class="btn">出題スタート</button>
+      <button id="B_quizNext"  class="btn primary">つぎの問題</button>
+      <button id="B_quizEnd"   class="btn">終了</button>
+    </div>
+
+    <div class="modal-actions" style="border-top:1px solid var(--line); padding-top:14px; margin-top:18px;">
+      <button id="B_apply" class="btn">きめて、とじる</button>
+      <button id="B_closeSettings" class="btn primary">とじる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   タブ切替
+   ============================================================ */
+(function(){
+  const btnA = document.getElementById("tabBtnA");
+  const btnB = document.getElementById("tabBtnB");
+  const panelA = document.getElementById("tabA");
+  const panelB = document.getElementById("tabB");
+  function activate(which){
+    const isA = which === "A";
+    btnA.classList.toggle("active", isA);
+    btnB.classList.toggle("active", !isA);
+    btnA.setAttribute("aria-selected", isA);
+    btnB.setAttribute("aria-selected", !isA);
+    panelA.classList.toggle("active", isA);
+    panelB.classList.toggle("active", !isA);
+    // タブ切替時にモーダルや結果オーバーレイを閉じる
+    document.querySelectorAll(".modal.show").forEach(m => m.classList.remove("show"));
+    document.querySelectorAll(".praise.show").forEach(m => m.classList.remove("show"));
+  }
+  btnA.addEventListener("click", ()=> activate("A"));
+  btnB.addEventListener("click", ()=> activate("B"));
+})();
+
+/* ============================================================
+   タブA: 花のたねを分ける（等分除）
+   ============================================================ */
+(function(){
+  const state = {
+    total: 16, people: 3, sound: true, hint: false,
+  };
+
+  const IMG = {
+    boy:       "https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/15boy2.png?raw=true",
+    girl:      "https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/16girl2.png?raw=true",
+    boySmile:  "https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/18boy3.png?raw=true",
+    girlSmile: "https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/17girl3.png?raw=true",
+    seed:      "https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/20himawari.png?raw=true",
+  };
+
+  const $ = id => document.getElementById(id);
+  const kidsEl   = $("A_kids");
+  const stockEl  = $("A_stock");
+  const amariEl  = $("A_amari");
+  const resultEl = $("A_result");
+  const titleSeeds  = $("A_ttlSeeds");
+  const titlePeople = $("A_ttlPeople");
+  const tabPanel    = $("tabA");
+
+  // ===== 効果音 =====
+  let audioCtx = null;
+  function getAudio(){
+    if(!audioCtx){
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e){ return null; }
+    }
+    return audioCtx;
+  }
+  function beep(freqs, gap=0.15, dur=0.12){
+    if(!state.sound) return;
+    const ctx = getAudio(); if(!ctx) return;
+    if(ctx.state === "suspended") ctx.resume();
+    const t0 = ctx.currentTime;
+    freqs.forEach((f,i)=>{
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.001, t0 + i*gap);
+      g.gain.exponentialRampToValueAtTime(0.2, t0 + i*gap + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + i*gap + dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t0 + i*gap);
+      o.stop (t0 + i*gap + dur + 0.02);
+    });
+  }
+  const playOK = ()=> beep([784, 988, 1318], 0.12, 0.18);
+  const playNG = ()=> beep([330, 247],       0.18, 0.22);
+
+  // ===== ドラッグ＆ドロップ =====
+  let dragSrcEl = null;
+  function isPanelActive(){ return tabPanel.classList.contains("active"); }
+
+  function makeSeed(){
+    const s = document.createElement("img");
+    s.src = IMG.seed;
+    s.className = "seed";
+    s.draggable = true;
+    s.alt = "たね";
+    s.addEventListener("dragstart", onDragStart);
+    s.addEventListener("dragend",   onDragEnd);
+    return s;
+  }
+  function onDragStart(e){
+    if(!isPanelActive()){ e.preventDefault(); return; }
+    dragSrcEl = e.currentTarget;
+    requestAnimationFrame(()=> {
+      if(dragSrcEl) dragSrcEl.classList.add("dragging");
+    });
+    try { e.dataTransfer.setData("text/plain","seed"); } catch(_){}
+    e.dataTransfer.effectAllowed = "move";
+  }
+  function onDragEnd(){
+    document.querySelectorAll("#tabA .seed.dragging").forEach(el => el.classList.remove("dragging"));
+    document.querySelectorAll("#tabA .kid.over, #tabA .zone.over").forEach(el=>el.classList.remove("over"));
+    dragSrcEl = null;
+  }
+  // タブAのパネル内でだけ後始末を発火
+  tabPanel.addEventListener("dragend", onDragEnd);
+  tabPanel.addEventListener("drop",    onDragEnd);
+
+  function attachDropTarget(outerEl, targetEl, highlightEl){
+    outerEl.addEventListener("dragover", e=>{
+      if(!dragSrcEl) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      highlightEl.classList.add("over");
+    });
+    outerEl.addEventListener("dragleave", e=>{
+      if(!outerEl.contains(e.relatedTarget)) highlightEl.classList.remove("over");
+    });
+    outerEl.addEventListener("drop", e=>{
+      if(!dragSrcEl) return;
+      e.preventDefault();
+      highlightEl.classList.remove("over");
+      if(dragSrcEl.parentElement !== targetEl){
+        targetEl.appendChild(dragSrcEl);
+        clearResult();
+      }
+    });
+  }
+
+  function buildKids(){
+    kidsEl.innerHTML = "";
+    kidsEl.style.setProperty("--cols", state.people);
+    for(let i=0; i<state.people; i++){
+      const d = document.createElement("div");
+      d.className = "kid";
+      const head = document.createElement("div");
+      head.className = "kidHead";
+      const img = document.createElement("img");
+      img.className = "face"; img.alt = "";
+      img.src = (i % 2) ? IMG.girl : IMG.boy;
+      head.appendChild(img);
+      const slot = document.createElement("div");
+      slot.className = "slotSeeds";
+      d.append(head, slot);
+      kidsEl.appendChild(d);
+      attachDropTarget(d, slot, d);
+      d._faceImg = img;
+      d._slot    = slot;
+    }
+  }
+
+  function setupZones(){
+    stockEl.innerHTML = "";
+    amariEl.innerHTML = "";
+    for(let i=0; i<state.total; i++){
+      stockEl.appendChild(makeSeed());
+    }
+  }
+  attachDropTarget($("A_stockZone"), stockEl, $("A_stockZone"));
+  attachDropTarget($("A_amariZone"), amariEl, $("A_amariZone"));
+
+  function clearResult(){
+    resultEl.textContent = "";
+    resultEl.className = "resultA";
+    Array.from(kidsEl.children).forEach((d,i)=>{
+      if(d._faceImg){
+        d._faceImg.src = (i % 2) ? IMG.girl : IMG.boy;
+      }
+    });
+  }
+  function updateTitle(){
+    titleSeeds.textContent  = state.total + "こ";
+    titlePeople.textContent = state.people + "人";
+  }
+  function updateHintBoxInModal(){
+    const hb = $("A_hintBox");
+    if($("A_hintToggle").checked){
+      const t = Math.max(1, Math.min(30, Number($("A_seedInput").value)||1));
+      const p = Number($("A_peopleSelect").value);
+      const q = Math.floor(t / p);
+      const r = t - q * p;
+      hb.style.display = "block";
+      hb.textContent = `こたえ: ${t} ÷ ${p} = ${q} あまり ${r}`;
+    }else{
+      hb.style.display = "none";
+    }
+  }
+  function fullReset(){
+    buildKids(); setupZones(); clearResult(); updateTitle();
+  }
+
+  $("A_judgeBtn").addEventListener("click", ()=>{
+    const kidEls = Array.from(kidsEl.children);
+    const counts = kidEls.map(d => d._slot.children.length);
+    const q = Math.floor(state.total / state.people);
+    const r = state.total - q * state.people;
+
+    const allEqual    = counts.every(c => c === q);
+    const stockEmpty  = stockEl.children.length === 0;
+    const amariOK     = amariEl.children.length === r;
+
+    if(allEqual && amariOK && stockEmpty){
+      resultEl.textContent = "せいかい！";
+      resultEl.className = "resultA ok";
+      kidEls.forEach((d,i)=>{
+        d._faceImg.src = (i % 2) ? IMG.girlSmile : IMG.boySmile;
+      });
+      const hm = $("A_hanamaru");
+      hm.classList.add("show");
+      setTimeout(()=> hm.classList.remove("show"), 1800);
+      playOK();
+    }else{
+      let msg = "ちがうよ";
+      if(stockEl.children.length > 0)         msg = "たねが まだ のこっているよ";
+      else if(!allEqual)                       msg = "おなじ数ずつに なっていないよ";
+      else if(!amariOK)                        msg = "あまりの数が ちがうよ";
+      resultEl.textContent = msg;
+      resultEl.className = "resultA ng";
+      playNG();
+    }
+  });
+
+  $("A_resetBtn").addEventListener("click", fullReset);
+
+  // ===== モーダル =====
+  const modal = $("A_settingModal");
+  function openModal(){
+    $("A_seedInput").value    = state.total;
+    $("A_peopleSelect").value = state.people;
+    $("A_soundToggle").checked = state.sound;
+    $("A_hintToggle").checked  = state.hint;
+    updateHintBoxInModal();
+    modal.classList.add("show");
+  }
+  function closeModal(){ modal.classList.remove("show"); }
+
+  $("A_settingBtn").addEventListener("click", openModal);
+  $("A_cancelSetting").addEventListener("click", closeModal);
+  modal.addEventListener("click", e=>{ if(e.target === modal) closeModal(); });
+  $("A_hintToggle").addEventListener("change", updateHintBoxInModal);
+  $("A_seedInput").addEventListener("input",  updateHintBoxInModal);
+  $("A_peopleSelect").addEventListener("change", updateHintBoxInModal);
+
+  // ===== ランダム =====
+  let lastRandomTotal = null, lastRandomPeople = null;
+  function pickRandomProblem(){
+    const kind = $("A_randomKind").value;
+    const peopleChoices = [2, 3, 4, 5];
+    const allCandidates = [];
+    for(const p of peopleChoices){
+      for(let n = p + 1; n <= 30; n++){
+        const r = n % p;
+        if(kind === "any") allCandidates.push({people:p, total:n});
+        else if(kind === "amari"    && r !== 0) allCandidates.push({people:p, total:n});
+        else if(kind === "warikiri" && r === 0) allCandidates.push({people:p, total:n});
+      }
+    }
+    if(allCandidates.length === 0) return { people: 3, total: 16 };
+    let pool = allCandidates;
+    if(lastRandomTotal !== null && allCandidates.length > 1){
+      const filtered = allCandidates.filter(c =>
+        !(c.total === lastRandomTotal && c.people === lastRandomPeople)
+      );
+      if(filtered.length > 0) pool = filtered;
+    }
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    lastRandomTotal  = picked.total;
+    lastRandomPeople = picked.people;
+    return picked;
+  }
+  $("A_randomBtn").addEventListener("click", ()=>{
+    const { total, people } = pickRandomProblem();
+    $("A_seedInput").value     = total;
+    $("A_peopleSelect").value  = String(people);
+    updateHintBoxInModal();
+  });
+
+  $("A_applyBtn").addEventListener("click", ()=>{
+    let t = Number($("A_seedInput").value);
+    if(!Number.isFinite(t)) t = 16;
+    t = Math.max(1, Math.min(30, Math.floor(t)));
+    $("A_seedInput").value = t;
+    state.total  = t;
+    state.people = Number($("A_peopleSelect").value);
+    state.sound  = $("A_soundToggle").checked;
+    state.hint   = $("A_hintToggle").checked;
+    fullReset();
+    closeModal();
+  });
+
+  document.addEventListener("keydown", e=>{
+    if(e.key === "Escape" && modal.classList.contains("show")) closeModal();
+  });
+
+  // 初期化
+  fullReset();
+})();
+
+/* ============================================================
+   タブB: プリンを分ける（包含除）
+   ============================================================ */
+(function(){
+  let JELLIES = 14;
+  let PEOPLE = 5;
+  let PER_PERSON = 3;
+  const MAX_PEOPLE = 8;
+  const MAX_PER = 5;
+  const MAX_JELLIES = MAX_PEOPLE * MAX_PER;
+
+  const imgNormalBoy  = "https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/08boy.png?raw=true";
+  const imgNormalGirl = "https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/09girl.png?raw=true";
+  const imgPurin      = "https://github.com/byakusen/jgoejjlgelge.amari_warizan_gazou/blob/main/10purin.png?raw=true";
+
+  const $ = id => document.getElementById(id);
+  const title = $('B_title'),
+        peopleWrap = $('B_people'),
+        stock = $('B_stock'),
+        remainder = $('B_remainder'),
+        result = $('B_result'),
+        overlay = $('B_overlay'),
+        inpJellies = $('B_inpJellies'),
+        selPeople = $('B_selPeople'),
+        selPer = $('B_selPer'),
+        selQuiz = $('B_selQuiz'),
+        quizStatus = $('B_quizStatus'),
+        modalBg = $('B_modalBg'),
+        tabPanel = $('tabB');
+
+  function isPanelActive(){ return tabPanel.classList.contains("active"); }
+
+  const sequences = { perAsc:[2,3,4,5], perDesc:[5,4,3,2] };
+  const quiz = { active:false, type:'perAsc', idx:0, finished:false };
+
+  let peopleState = [];
+  let hideTimer = null;
+
+  // ===== 効果音 =====
+  let AC = null;
+  function getAC(){
+    try{
+      if(!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+      if(AC.state === 'suspended') AC.resume();
+    }catch(e){}
+    return AC;
+  }
+  function beep(freq, dur, type, vol, when){
+    const ac = getAC(); if(!ac) return;
+    const t = ac.currentTime + when;
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0005, t + dur);
+    osc.connect(gain).connect(ac.destination);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  function playOk(){ beep(660,0.10,'sine',0.18,0); beep(880,0.12,'sine',0.18,0.10); beep(1050,0.14,'sine',0.18,0.22); }
+  function playNg(){ beep(300,0.18,'square',0.20,0); beep(220,0.20,'square',0.20,0.18); }
+
+  function updateTitle(){
+    title.textContent = "プリンが" + JELLIES + "こ。1人に" + PER_PERSON + "こずつ分けると、何人に分けられる？";
+  }
+
+  function buildPeople(){
+    peopleWrap.innerHTML = "";
+    peopleState = [];
+    for(let i = 0; i < PEOPLE; i++){
+      const card = document.createElement('div');
+      card.className = 'person';
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      const img = document.createElement('img');
+      img.alt = i % 2 === 0 ? '男の子' : '女の子';
+      img.src = i % 2 === 0 ? imgNormalBoy : imgNormalGirl;
+      avatar.appendChild(img);
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      card.append(avatar, slot);
+      peopleWrap.appendChild(card);
+      peopleState.push({ card, slot, img, gender:(i % 2 === 0 ? 'boy' : 'girl') });
+    }
+  }
+
+  function buildJellies(){
+    // タブB配下の jelly のみ削除する
+    tabPanel.querySelectorAll('.jelly').forEach(el => el.remove());
+    remainder.innerHTML = '';
+    for(let i = 0; i < JELLIES; i++){
+      const j = document.createElement('div');
+      j.className = 'jelly'; j.dataset.tab = 'B';
+      const img = document.createElement('img');
+      img.alt = 'プリン'; img.src = imgPurin; img.draggable = false;
+      j.appendChild(img);
+      stock.appendChild(j);
+    }
+  }
+
+  function ensureStock(){
+    if(stock.querySelectorAll('.jelly').length === 0) buildJellies();
+  }
+
+  // ===== Pointer Events ドラッグ =====
+  let dragging = null, dragOffsetX = 0, dragOffsetY = 0;
+  let originalParent = null, originalNext = null, lastHoverHost = null;
+
+  function getDropHost(x, y){
+    const prev = dragging.style.display;
+    dragging.style.display = 'none';
+    const el = document.elementFromPoint(x, y);
+    dragging.style.display = prev;
+    if(!el) return null;
+    // タブBの中だけを対象に
+    if(!tabPanel.contains(el)) return null;
+    const person = el.closest('#tabB .person');
+    if(person) return { host: person.querySelector('.slot'), deco: person };
+    const bin = el.closest('#tabB .bin');
+    if(bin) return { host: bin.querySelector('.area'), deco: bin };
+    return null;
+  }
+  function clearHover(){
+    document.querySelectorAll('#tabB .person.dragover, #tabB .bin.dragover')
+      .forEach(el => el.classList.remove('dragover'));
+    lastHoverHost = null;
+  }
+
+  // ★ ポインタイベントは tabPanel スコープに限定（タブAを操作中に発火しないように）
+  tabPanel.addEventListener('pointerdown', e => {
+    if(!isPanelActive()) return;
+    const el = e.target.closest('.jelly');
+    if(!el) return;
+    if(!tabPanel.contains(el)) return;
+    if(e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    dragging = el;
+    originalParent = el.parentNode;
+    originalNext = el.nextSibling;
+    const rect = el.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    el.classList.add('flying','dragging');
+    el.style.width = rect.width + 'px';
+    el.style.height = rect.height + 'px';
+    el.style.left = rect.left + 'px';
+    el.style.top = rect.top + 'px';
+    document.body.appendChild(el);
+    el.setPointerCapture && el.setPointerCapture(e.pointerId);
+  });
+
+  document.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    e.preventDefault();
+    dragging.style.left = (e.clientX - dragOffsetX) + 'px';
+    dragging.style.top  = (e.clientY - dragOffsetY) + 'px';
+    const target = getDropHost(e.clientX, e.clientY);
+    if(lastHoverHost && (!target || target.deco !== lastHoverHost)){
+      lastHoverHost.classList.remove('dragover'); lastHoverHost = null;
+    }
+    if(target && target.deco !== lastHoverHost){
+      target.deco.classList.add('dragover'); lastHoverHost = target.deco;
+    }
+  }, { passive:false });
+
+  function endDrag(e){
+    if(!dragging) return;
+    const target = (e && e.clientX !== undefined) ? getDropHost(e.clientX, e.clientY) : null;
+    dragging.classList.remove('flying','dragging');
+    dragging.style.left = ''; dragging.style.top = '';
+    dragging.style.width = ''; dragging.style.height = '';
+    if(target && target.host){
+      target.host.appendChild(dragging);
+    }else{
+      if(originalNext && originalNext.parentNode === originalParent){
+        originalParent.insertBefore(dragging, originalNext);
+      }else{
+        originalParent.appendChild(dragging);
+      }
+    }
+    clearHover();
+    dragging = null; originalParent = null; originalNext = null;
+  }
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+  window.addEventListener('blur', () => { if(dragging) endDrag(); });
+
+  function getState(){
+    const per = peopleState.map(p => p.slot.querySelectorAll('.jelly').length);
+    return {
+      per,
+      stockCnt: stock.querySelectorAll('.jelly').length,
+      remCnt:   remainder.querySelectorAll('.jelly').length
+    };
+  }
+
+  function showHanamaru(){
+    if(hideTimer){ clearTimeout(hideTimer); hideTimer = null; }
+    overlay.classList.add('show');
+    hideTimer = setTimeout(() => { overlay.classList.remove('show'); }, 1500);
+  }
+
+  function check(){
+    const CORRECT_PEOPLE = Math.floor(JELLIES / PER_PERSON);
+    const REMAINDER = JELLIES % PER_PERSON;
+    const { per, stockCnt, remCnt } = getState();
+    const exactly = per.filter(n => n === PER_PERSON).length;
+    const noOver = per.every(n => n <= PER_PERSON);
+    const correct = exactly === CORRECT_PEOPLE && remCnt === REMAINDER && stockCnt === 0 && noOver;
+
+    if(correct){
+      result.innerHTML = '<span class="ok">正解！ ' + JELLIES + '÷' + PER_PERSON + '＝' + CORRECT_PEOPLE + 'あまり' + REMAINDER + '</span>';
+      playOk();
+      showHanamaru();
+    }else{
+      playNg();
+      let msg = 'もう一度やってみよう。';
+      if(per.some(n => n > PER_PERSON)) msg = '1人につき多く配っている人があるよ。';
+      else if(stockCnt > 0) msg = 'まだ配っていないプリンがあるよ。';
+      else if(remCnt !== REMAINDER) msg = 'あまり置き場は ' + REMAINDER + ' こになるようにしよう。';
+      else if(exactly !== CORRECT_PEOPLE) msg = '「' + PER_PERSON + 'こ」がちょうど ' + CORRECT_PEOPLE + ' 人になるようにしよう。';
+      result.innerHTML = '<span class="ng">' + msg + '</span>';
+      overlay.classList.remove('show');
+    }
+  }
+
+  function adjustPeopleCount(){
+    const need = Math.max(1, Math.floor(JELLIES / PER_PERSON));
+    PEOPLE = Math.max(3, Math.min(MAX_PEOPLE, need));
+    selPeople.value = String(PEOPLE);
+  }
+
+  function applySettings(){
+    JELLIES = Math.min(MAX_JELLIES, Math.max(1, parseInt(inpJellies.value, 10) || 14));
+    inpJellies.value = String(JELLIES);
+    PEOPLE = parseInt(selPeople.value, 10);
+    PER_PERSON = parseInt(selPer.value, 10);
+    const need = Math.max(1, Math.floor(JELLIES / PER_PERSON));
+    if(PEOPLE < need){
+      PEOPLE = Math.min(MAX_PEOPLE, need);
+      selPeople.value = String(PEOPLE);
+    }
+    updateTitle();
+    buildPeople();
+    buildJellies();
+    result.textContent = '';
+  }
+
+  function updateQuizStatus(){
+    const seq = sequences[quiz.type] || sequences.perAsc;
+    if(quiz.finished){
+      quizStatus.classList.add('done');
+      quizStatus.textContent = '🎉 全 ' + seq.length + ' 問おわりました！';
+    }else if(quiz.active){
+      quizStatus.classList.remove('done');
+      quizStatus.textContent = '第 ' + (quiz.idx + 1) + ' 問 / 全 ' + seq.length + ' 問：1人に ' + PER_PERSON + ' こずつ';
+    }else{
+      quizStatus.classList.remove('done');
+      quizStatus.textContent = '未開始';
+    }
+  }
+
+  function applyStage(){
+    quiz.active = true;
+    quiz.finished = false;
+    quiz.type = selQuiz.value;
+    const seq = sequences[quiz.type] || sequences.perAsc;
+    PER_PERSON = seq[quiz.idx] || 2;
+    selPer.value = String(PER_PERSON);
+    adjustPeopleCount();
+    updateTitle();
+    buildPeople();
+    buildJellies();
+    result.textContent = '';
+    updateQuizStatus();
+  }
+
+  // モーダル
+  function openModal(){ modalBg.classList.add('show'); updateQuizStatus(); }
+  function closeModal(){ modalBg.classList.remove('show'); }
+  $('B_openSettings').addEventListener('click', openModal);
+  $('B_closeSettings').addEventListener('click', closeModal);
+  modalBg.addEventListener('click', e => { if(e.target === modalBg) closeModal(); });
+
+  // ===== ランダム問題生成 =====
+  // プリンの数・人数・1人に配る数の3つをまとめてランダムに決める。
+  // 制約:
+  //   - 1人に配る数 (per) は 2〜5
+  //   - 人数 (people) は 3〜MAX_PEOPLE(8)
+  //   - プリンの数 (jellies) > 人数  (要件)
+  //   - プリンの数 ≤ MAX_JELLIES(40)
+  //   - 教材として自然なように、実際に配り切る人数(=floor(jellies/per))が
+  //     席の数 people 以下になるようにする (=配り切れない子は出ない)
+  let B_lastRandom = null;
+  function pickRandomB(){
+    const kind = $('B_randomKind').value;
+    const candidates = [];
+    for(let per = 2; per <= MAX_PER; per++){
+      for(let people = 3; people <= MAX_PEOPLE; people++){
+        // jellies の最小値は people+1 (要件: プリン>人数)
+        const minJ = people + 1;
+        const maxJ = Math.min(MAX_JELLIES, people * per + (per - 1)); // 最大あまり = per-1
+        for(let jellies = minJ; jellies <= maxJ; jellies++){
+          // 配り切れる人数が席数以下である必要
+          const canServe = Math.floor(jellies / per);
+          if(canServe > people) continue;
+          // 包含除として最低限「1人以上には配れる」問題にする
+          if(canServe < 1) continue;
+          const r = jellies % per;
+          if(kind === 'any')                    candidates.push({jellies, people, per});
+          else if(kind === 'amari'    && r !== 0) candidates.push({jellies, people, per});
+          else if(kind === 'warikiri' && r === 0) candidates.push({jellies, people, per});
+        }
+      }
+    }
+    if(candidates.length === 0) return { jellies:14, people:5, per:3 };
+
+    // 直前と完全に同じは避ける
+    let pool = candidates;
+    if(B_lastRandom && candidates.length > 1){
+      const f = candidates.filter(c =>
+        !(c.jellies === B_lastRandom.jellies &&
+          c.people  === B_lastRandom.people  &&
+          c.per     === B_lastRandom.per)
+      );
+      if(f.length > 0) pool = f;
+    }
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    B_lastRandom = picked;
+    return picked;
+  }
+  $('B_randomBtn').addEventListener('click', () => {
+    const { jellies, people, per } = pickRandomB();
+    inpJellies.value = String(jellies);
+    selPeople.value  = String(people);
+    selPer.value     = String(per);
+  });
+
+  // ボタン
+  $('B_check').addEventListener('click', check);
+  $('B_reset').addEventListener('click', () => {
+    overlay.classList.remove('show');
+    result.textContent = '';
+    buildJellies();
+  });
+  $('B_apply').addEventListener('click', () => {
+    applySettings(); ensureStock(); closeModal();
+  });
+  $('B_quizStart').addEventListener('click', () => {
+    quiz.idx = 0; quiz.finished = false; applyStage(); ensureStock(); closeModal();
+  });
+  $('B_quizNext').addEventListener('click', () => {
+    if(!quiz.active){
+      quiz.idx = 0; quiz.finished = false; applyStage(); ensureStock(); closeModal(); return;
+    }
+    const seq = sequences[quiz.type] || sequences.perAsc;
+    if(quiz.idx + 1 >= seq.length){
+      quiz.finished = true; quiz.active = false; updateQuizStatus(); return;
+    }
+    quiz.idx++; applyStage(); ensureStock(); closeModal();
+  });
+  $('B_quizEnd').addEventListener('click', () => {
+    quiz.active = false; quiz.finished = false; quiz.idx = 0;
+    updateQuizStatus();
+    overlay.classList.remove('show');
+    result.textContent = '';
+    buildJellies();
+  });
+
+  document.addEventListener("keydown", e=>{
+    if(e.key === "Escape" && modalBg.classList.contains("show")) closeModal();
+  });
+
+  // 初期化
+  function init(){
+    inpJellies.value = '14';
+    selPer.value = '3';
+    selPeople.value = '5';
+    applySettings();
+    ensureStock();
+    updateQuizStatus();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
